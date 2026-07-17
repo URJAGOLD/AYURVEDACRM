@@ -1,0 +1,270 @@
+// Prakriti Herbs CRM - Prisma schema (multi-user RBAC + Orders + Shiprocket)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  name          String
+  email         String    @unique
+  phone         String?
+  passwordHash  String
+  role          String    @default("AGENT")
+  permissions   String    @default("{}")
+  isActive      Boolean   @default(true)
+  mustChangePw  Boolean   @default(false)
+  lastLoginAt   DateTime?
+  createdById   Int?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  ownedOrders   Order[]        @relation("LeadOwner")
+  zmOrders      Order[]        @relation("ZoneManager")
+  history       OrderHistory[]
+  audits        AuditLog[]
+  statusChanges OrderStatusActivity[]
+  dealerId      Int?
+  dealerRef     Dealer?   @relation("DealerUsers", fields: [dealerId], references: [id])
+
+  @@index([role])
+  @@index([isActive])
+}
+
+model Order {
+  id                Int       @id @default(autoincrement())
+  orderCode         String    @unique
+  dateTime          DateTime  @default(now())
+  customerName      String
+  contactNumber     String
+  email             String?
+  productName       String
+  productSku        String?
+  quantity          Int       @default(1)
+  price             Float
+  address           String
+  city              String
+  stateId           Int?
+  districtId        Int?
+  pincode           String
+  orderStatus       String    @default("New")
+  paymentStatus     String    @default("Pending")
+  source            String
+  sourceTags        String    @default("[]")
+  altMobile         String?
+  externalRef       String?
+  totalAmount       Float?
+  onlinePaid        Float     @default(0)
+  paymentMode       String?
+  reason            String?
+  remark            String?
+  followUpDate      DateTime?
+  leadOwnerId       Int?
+  leadOwner         User?     @relation("LeadOwner", fields: [leadOwnerId], references: [id])
+  agentAssignDate   DateTime?
+  dealerId          Int?
+  dealer            Dealer?   @relation(fields: [dealerId], references: [id])
+  dealerAssignDate  DateTime?
+  zmId              Int?
+  zoneManager       User?     @relation("ZoneManager", fields: [zmId], references: [id])
+  shiprocketOrderId String?
+  shipmentId        String?
+  awbCode           String?
+  courierName       String?
+  shippingStatus    String?
+  labelUrl          String?
+  manifestUrl       String?
+  bookedAt          DateTime?
+  trackingStage     String?
+  lastTrackedAt     DateTime?
+  expectedDelivery  DateTime?
+  rtoStatus         String?
+  ndrStatus         String?
+  state             State?    @relation(fields: [stateId], references: [id])
+  district          District? @relation(fields: [districtId], references: [id])
+  history           OrderHistory[]
+  statusActivity    OrderStatusActivity[]
+  isDeleted         Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([orderStatus])
+  @@index([source])
+  @@index([leadOwnerId])
+  @@index([dealerId])
+  @@index([contactNumber])
+  @@index([pincode])
+  @@index([dateTime])
+  @@index([isDeleted])
+  @@index([trackingStage])
+  @@index([followUpDate])
+  @@index([shiprocketOrderId])
+}
+
+model OrderHistory {
+  id           Int       @id @default(autoincrement())
+  orderId      Int
+  order        Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status       String
+  remark       String?
+  followUpDate DateTime?
+  addedById    Int?
+  addedBy      User?     @relation(fields: [addedById], references: [id])
+  createdAt    DateTime  @default(now())
+
+  @@index([orderId])
+}
+
+model State {
+  id        Int        @id
+  name      String
+  districts District[]
+  orders    Order[]
+}
+
+model District {
+  id      Int     @id
+  name    String
+  stateId Int
+  state   State   @relation(fields: [stateId], references: [id])
+  orders  Order[]
+
+  @@index([stateId])
+}
+
+model Dealer {
+  id         Int     @id @default(autoincrement())
+  name       String
+  city       String?
+  stateId    Int?
+  districtId Int?
+  isActive   Boolean @default(true)
+  orders     Order[]
+  users      User[]  @relation("DealerUsers")
+}
+
+model Source {
+  id       Int     @id @default(autoincrement())
+  name     String  @unique
+  isActive Boolean @default(true)
+}
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  entityType String?
+  entityId   String?
+  details    String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([entityType])
+}
+
+model SyncEvent {
+  id         Int      @id @default(autoincrement())
+  source     String
+  externalId String
+  mobile     String?
+  orderId    Int?
+  createdAt  DateTime @default(now())
+  @@unique([source, externalId])
+  @@index([mobile])
+}
+
+model Pincode {
+  pincode  String  @id
+  place    String?
+  district String?
+  state    String?
+}
+
+model ShiprocketAccount {
+  id              Int       @id @default(autoincrement())
+  label           String
+  email           String
+  passwordEnc     String
+  baseUrl         String?
+  pickupLocation  String    @default("Primary")
+  webhookToken    String?
+  isActive        Boolean   @default(false)
+  lastTestAt      DateTime?
+  lastTestOk      Boolean?
+  lastTestMessage String?
+  lastSyncAt      DateTime?
+  createdById     Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([isActive])
+}
+model WebhookLog {
+  id        Int      @id @default(autoincrement())
+  source    String   // "shiprocket" | "meta" | etc
+  event     String   // ORDER_CREATED | STATUS_UPDATE | AWB_ASSIGNED | etc
+  awb       String?
+  orderId   Int?
+  srOrderId String?
+  payload   String
+  action    String   // "created" | "updated" | "ignored" | "error"
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([source, event])
+  @@index([awb])
+  @@index([orderId])
+  @@index([createdAt])
+}
+model SyncStatus {
+  id            Int      @id @default(1)
+  lastSyncAt    DateTime @default(now())
+  adminOrders   Int      @default(0)
+  crmOrderRows  Int      @default(0)
+  syncedToday   Int      @default(0)
+  pendingQueue  Int      @default(0)
+  failed24h     Int      @default(0)
+  missingOrders Int      @default(0)
+  note          String?
+  updatedAt     DateTime @updatedAt
+}
+
+// Phase 2B-1: business configuration (key/value JSON). Code-fallback in src/lib/settings.ts.
+// Keys: "crm.preferences", "crm.followup". Additive only - no relations, touches no existing table.
+model Setting {
+  key         String   @id
+  value       String
+  updatedById Int?
+  updatedAt   DateTime @updatedAt
+}
+
+// Phase 4-A: dedicated, clean status-change activity log. Additive only.
+// OrderHistory is left untouched (it is a mixed history/notes log + webhook prefixes).
+// This table records ONLY real status transitions, with previous->new, who, and snapshots.
+//   source: "manual" (drawer/edit) | "bulk" (bulk-status) | "webhook" (Shiprocket auto-sync)
+//   changedById: null = system/webhook (no user)
+model OrderStatusActivity {
+  id             Int      @id @default(autoincrement())
+  orderId        Int
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  previousStatus String?
+  newStatus      String
+  source         String
+  changedById    Int?
+  changedBy      User?    @relation(fields: [changedById], references: [id])
+  leadOwnerId    Int?
+  dealerId       Int?
+  changedAt      DateTime @default(now())
+
+  @@index([orderId])
+  @@index([newStatus])
+  @@index([changedById])
+  @@index([changedAt])
+  @@index([leadOwnerId])
+}
