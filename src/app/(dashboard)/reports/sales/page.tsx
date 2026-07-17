@@ -62,7 +62,7 @@ export default function SalesReportPage() {
   return (
     <div className="p-4 md:p-6">
       <div className="mb-4 rounded-2xl p-5 text-white shadow-lg text-center" style={{ background: "linear-gradient(135deg,#064e3b,#15803d)" }}>
-        <h1 className="text-xl md:text-2xl font-extrabold tracking-wide">PRAKRITI HERBS PRIVATE LIMITED</h1>
+        <h1 className="text-xl md:text-2xl font-extrabold tracking-wide">AYURVEDA</h1>
         <p className="text-sm opacity-90 mt-1">Sales Report &middot; Delivered + GPO Delivered</p>
         <p className="text-[11px] opacity-80 mt-0.5">{rangeLabel}</p>
       </div>
