@@ -6,8 +6,8 @@ import { api } from "@/lib/apiClient";
 const GST_PCT = 5;
 const DEF_HSN = "30049011";
 const DEF_ITEM = "KSG";
-const COMPANY = "PRAKRITI HERBS PRIVATE LIMITED- JAIPUR";
-const GSTIN = "08AAQCP4095D1Z2";
+const COMPANY = "AYURVEDA";
+const GSTIN = "0";
 const STATE_CODE = "8";
 
 function wordsIndian(n: number): string {
