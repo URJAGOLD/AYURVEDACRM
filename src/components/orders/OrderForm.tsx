@@ -26,7 +26,7 @@ export function OrderForm({ orderId }: { orderId?: string }) {
   const { can } = useAuth();
   const isEdit = !!orderId;
   const [form, setForm] = useState<any>({
-    customerName: "", contactNumber: "", altMobile: "", email: "", productName: "Sutra Gold+", quantity: 1, price: 999,
+    customerName: "", contactNumber: "", altMobile: "", email: "", productName: "max x7", quantity: 1, price: 999,
     totalAmount: "", onlinePaid: 0, paymentMode: "COD", address: "", city: "", pincode: "", stateId: "", districtId: "",
     source: "Calling", paymentStatus: "Pending", orderStatus: "New", remark: "", leadOwnerId: "", followUpDate: "", dealerId: "",
   });
