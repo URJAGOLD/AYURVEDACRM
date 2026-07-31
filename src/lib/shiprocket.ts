@@ -70,6 +70,20 @@ export interface CrmOrderForShiprocket {
   productName: string; productSku?: string | null; quantity: number; price: number; paymentStatus: string;
 }
 
+async function isPickupLocationError(err: any): Promise<boolean> {
+  const m = (shiprocketError(err) || "").toLowerCase();
+  return m.includes("pickup") || m.includes("pickup_location") || m.includes("pickup-location");
+}
+
+/** Fetch the actual pickup location names registered in the Shiprocket account. */
+export async function fetchPickupLocationNames(cfg: { email: string; password: string; baseUrl: string }): Promise<string[]> {
+  try {
+    const token = await loginWithCreds(cfg.email, cfg.password, cfg.baseUrl);
+    const pickups = await fetchPickupLocations(token, cfg.baseUrl);
+    return (pickups || []).map((p: any) => p.pickup_location || p.name || "").filter(Boolean);
+  } catch { return []; }
+}
+
 export async function bookOrderOnShiprocket(order: CrmOrderForShiprocket) {
   const cfg = await activeConfig();
   const payload = {
@@ -89,10 +103,26 @@ export async function bookOrderOnShiprocket(order: CrmOrderForShiprocket) {
     height: Number(process.env.DEFAULT_PACKAGE_HEIGHT || 6),
     weight: Number(process.env.DEFAULT_PACKAGE_WEIGHT || 0.5),
   };
-  return withAuthRetry(async (c) => {
+  const attempt = () => withAuthRetry(async (c) => {
     const res = await c.post("/orders/create/adhoc", payload);
     return { shiprocketOrderId: String(res.data?.order_id ?? ""), shipmentId: String(res.data?.shipment_id ?? ""), status: res.data?.status, raw: res.data, payload };
   });
+  try {
+    return await attempt();
+  } catch (err) {
+    if (!(await isPickupLocationError(err))) throw err;
+    // Self-heal: stored pickup name (default "Primary") may not match the account's
+    // real pickup location. Fetch the real names and retry once with the first one.
+    const names = await fetchPickupLocationNames(cfg);
+    const pick = names[0] || "";
+    if (!pick) {
+      throw new Error("Shiprocket ne pickup location reject kiya aur account mein koi pickup location nahi mili. Shiprocket Panel -> Settings -> Pickup Locations mein address add/sync karein, phir retry karein.");
+    }
+    if (pick === cfg.pickupLocation) throw err;
+    if (cfg.id) await prisma.shiprocketAccount.update({ where: { id: cfg.id }, data: { pickupLocation: pick } }).catch(() => {});
+    payload.pickup_location = pick;
+    return await attempt();
+  }
 }
 
 export function mapSrStatus(raw: string): { stage: string; crmStatus: string | null } {
