@@ -48,7 +48,13 @@ async function srClient(): Promise<AxiosInstance> {
 async function withAuthRetry<T>(fn: (c: AxiosInstance) => Promise<T>): Promise<T> {
   try { return await fn(await srClient()); }
   catch (err: any) {
-    if (err?.response?.status === 401) { await clearShiprocketTokenCache(); return await fn(await srClient()); }
+    // 401 = expired/invalid token. 403 "permission/unauthorized" = API user permissions may
+    // have been changed in the Shiprocket panel recently -> stale cached token. Retry once
+    // with a fresh token; a real permission problem still surfaces after the retry.
+    const status = err?.response?.status;
+    const msg = String(err?.response?.data?.message || err?.message || "").toLowerCase();
+    const permissionDenied = status === 403 && (msg.includes("permission") || msg.includes("unauthorized"));
+    if (status === 401 || permissionDenied) { await clearShiprocketTokenCache(); return await fn(await srClient()); }
     throw err;
   }
 }

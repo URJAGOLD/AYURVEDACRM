@@ -83,7 +83,7 @@ export default function BookingResultModal({ result, onClose, onRetry, onOpenOrd
             <div className="rounded-lg bg-amber-50 p-3 text-amber-800">
               <p className="font-medium">{result.warning || "Order Shiprocket par ban gaya par AWB abhi assign nahi hua."}</p>
               {result.shipmentId && <p className="mt-1 text-xs">Shipment ID: <span className="font-mono">{result.shipmentId}</span></p>}
-              <p className="mt-1 text-xs">Doosre courier ke saath Rebook karein.</p>
+              <p className="mt-1 text-xs">Order -> Track / Manage -> <b>Assign AWB</b> se dobara try karein, ya doosre courier ke saath Rebook karein.</p>
             </div>
           )}
           {err && (

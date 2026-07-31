@@ -28,6 +28,7 @@ export default function ShipmentModal({ order, onClose, onRebook, onAfter }: { o
     setBusy(kind); setMsg("");
     try {
       if (kind === "track") { await load(); onAfter(); setMsg("Tracking refreshed"); }
+      else if (kind === "awb") { const r = await api.post("/api/shiprocket/awb", { orderId: order.id }); if (r.awb) { setMsg("AWB assigned: " + r.awb); onAfter(); } else setMsg("No AWB returned"); }
       else if (kind === "label") { const r = await api.post("/api/shiprocket/label", { orderId: order.id }); if (r.labelUrl) window.open(r.labelUrl, "_blank"); else setMsg("Label not ready yet"); }
       else if (kind === "manifest") { const r = await api.post("/api/shiprocket/manifest", { orderId: order.id }); if (r.manifestUrl) window.open(r.manifestUrl, "_blank"); else setMsg("Manifest not ready yet"); }
       else if (kind === "invoice") { window.open("/crm/invoice/" + order.id, "_blank"); }
@@ -63,6 +64,7 @@ export default function ShipmentModal({ order, onClose, onRebook, onAfter }: { o
           </div>
 
           <div className="mb-3 flex flex-wrap gap-2">
+            {order.shipmentId && !order.awbCode && Btn("awb", "Assign AWB", "bg-emerald-50 text-emerald-700 hover:bg-emerald-100")}
             {Btn("track", "Refresh", "bg-blue-50 text-blue-700 hover:bg-blue-100")}
             {Btn("label", "Label")}
             {Btn("manifest", "Manifest")}
