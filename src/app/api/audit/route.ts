@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
   if (g instanceof Response) return g;
   const sp = req.nextUrl.searchParams;
   const where = buildWhere(sp);
+  where.user = { isHidden: false };
 
   if (sp.get("format") === "csv") {
     const rows = await prisma.auditLog.findMany({ where, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 5000, include: { user: { select: { name: true, role: true, email: true } } } });
